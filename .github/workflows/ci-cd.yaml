@@ -1,0 +1,60 @@
+name: CI/CD Pipeline
+
+on:
+      push:
+            branches:
+                  - master
+      pull_request:
+            branches:
+                  - master
+
+jobs:
+      build:
+            runs-on: ubuntu-latest
+
+            steps:
+                  - name: Checkout codes
+                    uses: actions/checkout@v3
+
+                  - name: Setup Node
+                    uses: actions/setup-node@v3
+                    with:
+                          node-version: 18
+
+                  - name: Install dependencies
+                    run: npm ci
+
+                  - name: Build application
+                    run: npm run build
+
+                  - name: Run tests
+                    run: npm run test
+
+                  - name: Build Docker image
+                    run: docker build -t mrjay/pearl:latest .
+
+                  - name: Set up Terraform
+                    uses: hashicorp/setup-terraform@v1
+                    with:
+                          terraform_version: 1.0.0
+
+                  - name: Terraform Init
+                    run: terraform init
+
+                  - name: Terraform Validate
+                    run: terraform validate
+
+                  - name: Terraform Plan
+                    env:
+                          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                    run: terraform plan
+
+                  - name: Terraform Format
+                    run: terraform fmt
+
+                  - name: Terraform Apply
+                    env:
+                          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                    run: terraform apply -auto-approve
